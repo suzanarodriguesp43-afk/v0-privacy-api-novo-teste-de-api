@@ -9,6 +9,8 @@ export interface UTMParams {
   utm_id?: string
   utm_term?: string
   utm_content?: string
+  src?: string
+  sck?: string
 }
 
 const UTM_KEYS: (keyof UTMParams)[] = [
@@ -20,9 +22,11 @@ const UTM_KEYS: (keyof UTMParams)[] = [
   "utm_id",
   "utm_term",
   "utm_content",
+  "src",
+  "sck",
 ]
 
-const STORAGE_KEY = "donation_utm_params"
+const STORAGE_KEY = "utm_params"
 
 // Captura UTMs da URL atual
 export function captureUTMsFromURL(): UTMParams {
@@ -41,22 +45,22 @@ export function captureUTMsFromURL(): UTMParams {
   return utms
 }
 
-// Salva UTMs no sessionStorage
+// Salva UTMs no localStorage (mais persistente)
 export function saveUTMs(utms: UTMParams): void {
   if (typeof window === "undefined") return
 
   const existing = getStoredUTMs()
   const merged = { ...existing, ...utms }
 
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
 }
 
-// Recupera UTMs do sessionStorage
+// Recupera UTMs do localStorage
 export function getStoredUTMs(): UTMParams {
   if (typeof window === "undefined") return {}
 
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(STORAGE_KEY)
     return stored ? JSON.parse(stored) : {}
   } catch {
     return {}
@@ -84,4 +88,19 @@ export function getUTMsForAPI(): UTMParams {
 
   // Mescla dando prioridade para URL atual
   return { ...storedUtms, ...urlUtms }
+}
+
+// Formata UTMs para exibição
+export function formatUTMsForDisplay(utms: UTMParams): string {
+  const parts: string[] = []
+
+  if (utms.utm_source) parts.push(`Fonte: ${utms.utm_source}`)
+  if (utms.utm_medium) parts.push(`Mídia: ${utms.utm_medium}`)
+  if (utms.utm_campaign) parts.push(`Campanha: ${utms.utm_campaign}`)
+  if (utms.utm_adset) parts.push(`Conjunto: ${utms.utm_adset}`)
+  if (utms.utm_ad) parts.push(`Anúncio: ${utms.utm_ad}`)
+  if (utms.src) parts.push(`src: ${utms.src}`)
+  if (utms.sck) parts.push(`sck: ${utms.sck}`)
+
+  return parts.join(" | ")
 }

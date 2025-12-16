@@ -58,8 +58,6 @@ interface FurionPayStatusResponse {
 export async function createFurionPayPix(data: CreatePixRequest): Promise<FurionPayPixResponse> {
   const apiKey = FURIONPAY_API_KEY
 
-  console.log("[v0] FurionPay usando chave:", apiKey.substring(0, 20) + "...")
-
   const requestBody = {
     amount: data.amount,
     description: data.description,
@@ -72,8 +70,6 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
     metadata: data.metadata,
   }
 
-  console.log("[v0] FurionPay Request Body:", JSON.stringify(requestBody, null, 2))
-
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
     headers: {
@@ -84,7 +80,6 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
   })
 
   const responseText = await response.text()
-  console.log("[v0] FurionPay Response:", responseText)
 
   let responseData: FurionPayPixResponse
   try {

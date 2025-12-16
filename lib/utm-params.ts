@@ -24,24 +24,6 @@ const UTM_KEYS = [
   "sck",
 ] as const
 
-export function setTestUTMs(): void {
-  if (typeof window === "undefined") return
-
-  const testUtms: UTMParams = {
-    utm_source: "test_source",
-    utm_medium: "test_medium",
-    utm_campaign: "test_campaign",
-    utm_adset: "test_adset",
-    utm_ad: "test_ad",
-    utm_id: "test_id_123",
-    utm_term: "test_term",
-    utm_content: "test_content",
-  }
-
-  localStorage.setItem("utm_params", JSON.stringify(testUtms))
-  console.log("[v0] UTMs de teste configurados:", testUtms)
-}
-
 export function captureUTMParams(): UTMParams {
   if (typeof window === "undefined") return {}
 
@@ -58,7 +40,6 @@ export function captureUTMParams(): UTMParams {
   // Se há novos UTMs, salva no localStorage
   if (Object.keys(newUtmParams).length > 0) {
     localStorage.setItem("utm_params", JSON.stringify(newUtmParams))
-    console.log("[v0] UTM params capturados da URL e salvos:", newUtmParams)
     return newUtmParams
   }
 
@@ -70,8 +51,7 @@ export function getStoredUTMParams(): UTMParams {
 
   try {
     const stored = localStorage.getItem("utm_params")
-    const params = stored ? JSON.parse(stored) : {}
-    return params
+    return stored ? JSON.parse(stored) : {}
   } catch {
     return {}
   }
@@ -94,14 +74,12 @@ export function getAllUTMParams(): UTMParams {
   // Se tem na URL, atualiza storage e retorna
   if (Object.keys(utmParams).length > 0) {
     localStorage.setItem("utm_params", JSON.stringify(utmParams))
-    console.log("[v0] UTMs encontrados na URL:", utmParams)
     return utmParams
   }
 
   // Tenta do localStorage
   const storedParams = getStoredUTMParams()
   if (Object.keys(storedParams).length > 0) {
-    console.log("[v0] UTMs recuperados do localStorage:", storedParams)
     return storedParams
   }
 
@@ -122,7 +100,6 @@ export function getAllUTMParams(): UTMParams {
 
       if (Object.keys(refUtmParams).length > 0) {
         localStorage.setItem("utm_params", JSON.stringify(refUtmParams))
-        console.log("[v0] UTMs do referrer:", refUtmParams)
         return refUtmParams
       }
     } catch {
@@ -130,7 +107,6 @@ export function getAllUTMParams(): UTMParams {
     }
   }
 
-  console.log("[v0] Nenhum UTM encontrado")
   return {}
 }
 
