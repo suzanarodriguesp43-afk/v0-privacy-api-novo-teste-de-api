@@ -29,6 +29,10 @@ interface FurionPayPixResponse {
     expires_at: string
     created_at: string
   }
+  error?: {
+    code: string
+    message: string
+  }
 }
 
 interface FurionPayStatusResponse {
@@ -43,9 +47,12 @@ interface FurionPayStatusResponse {
     created_at: string
     metadata?: Record<string, string>
   }
+  error?: {
+    code: string
+    message: string
+  }
 }
 
-// Criar PIX
 export async function createFurionPayPix(data: CreatePixRequest): Promise<FurionPayPixResponse> {
   const apiKey = process.env.FURIONPAY_API_KEY
 
@@ -53,8 +60,16 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
     throw new Error("FURIONPAY_API_KEY não configurado")
   }
 
-  console.log("[v0] FurionPay - Creating PIX with URL:", `${FURIONPAY_BASE_URL}/api-v1-pix-create`)
-  console.log("[v0] FurionPay - Request data:", JSON.stringify(data, null, 2))
+  // Formato correto conforme documentação: customer_name, customer_email, customer_document
+  const requestBody = {
+    amount: data.amount,
+    description: data.description,
+    external_reference: data.external_reference,
+    customer_name: data.customer.name,
+    customer_email: data.customer.email,
+    customer_document: data.customer.document,
+    metadata: data.metadata,
+  }
 
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
@@ -62,40 +77,32 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(requestBody),
   })
 
   const responseText = await response.text()
-  console.log("[v0] FurionPay - Response status:", response.status)
-  console.log("[v0] FurionPay - Response body:", responseText)
 
-  if (!response.ok) {
-    let errorMessage = `FurionPay API error: ${response.status}`
-    try {
-      const errorData = JSON.parse(responseText)
-      errorMessage = errorData.message || errorData.error || errorMessage
-    } catch {
-      errorMessage = responseText || errorMessage
-    }
-    throw new Error(errorMessage)
-  }
-
+  let responseData: FurionPayPixResponse
   try {
-    return JSON.parse(responseText)
+    responseData = JSON.parse(responseText)
   } catch {
     throw new Error(`Resposta inválida da API: ${responseText}`)
   }
+
+  if (!response.ok || !responseData.success) {
+    const errorMessage = responseData.error?.message || `FurionPay API error: ${response.status}`
+    throw new Error(errorMessage)
+  }
+
+  return responseData
 }
 
-// Consultar status do PIX
 export async function getFurionPayPixStatus(txid: string): Promise<FurionPayStatusResponse> {
   const apiKey = process.env.FURIONPAY_API_KEY
 
   if (!apiKey) {
     throw new Error("FURIONPAY_API_KEY não configurado")
   }
-
-  console.log("[v0] FurionPay - Checking PIX status for txid:", txid)
 
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-status?txid=${txid}`, {
     method: "GET",
@@ -105,24 +112,20 @@ export async function getFurionPayPixStatus(txid: string): Promise<FurionPayStat
   })
 
   const responseText = await response.text()
-  console.log("[v0] FurionPay - Status response:", responseText)
 
-  if (!response.ok) {
-    let errorMessage = `FurionPay API error: ${response.status}`
-    try {
-      const errorData = JSON.parse(responseText)
-      errorMessage = errorData.message || errorData.error || errorMessage
-    } catch {
-      errorMessage = responseText || errorMessage
-    }
-    throw new Error(errorMessage)
-  }
-
+  let responseData: FurionPayStatusResponse
   try {
-    return JSON.parse(responseText)
+    responseData = JSON.parse(responseText)
   } catch {
     throw new Error(`Resposta inválida da API: ${responseText}`)
   }
+
+  if (!response.ok || !responseData.success) {
+    const errorMessage = responseData.error?.message || `FurionPay API error: ${response.status}`
+    throw new Error(errorMessage)
+  }
+
+  return responseData
 }
 
 // Helpers para verificar status

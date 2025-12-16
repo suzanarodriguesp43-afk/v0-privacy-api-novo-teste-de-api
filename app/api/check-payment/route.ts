@@ -16,8 +16,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Transaction ID é obrigatório" }, { status: 400 })
     }
 
-    console.log("[v0] Check payment - Checking txid:", transactionId)
-
     // Consulta o status do PIX na FurionPay
     const statusResponse = await getFurionPayPixStatus(transactionId)
 
@@ -45,7 +43,7 @@ export async function POST(request: NextRequest) {
       paidAt: pixData.paid_at,
     })
   } catch (error) {
-    console.error("[API] Check payment error:", error)
+    console.error("[Check Payment] Error:", error)
     return NextResponse.json({ error: "Erro ao verificar pagamento" }, { status: 500 })
   }
 }

@@ -201,8 +201,6 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       const generatedCPF = generateValidCPF()
       const customerName = name.trim()
 
-      console.log("[v0] Frontend - Enviando requisição de pagamento")
-
       const paymentResponse = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
@@ -221,21 +219,13 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
         }),
       })
 
-      console.log("[v0] Frontend - Status da resposta:", paymentResponse.status)
-
       const paymentResult = await paymentResponse.json()
 
-      console.log("[v0] Frontend - Resultado completo:", paymentResult)
-      console.log("[v0] Frontend - pixCode recebido:", paymentResult.pixCode?.substring(0, 50) + "...")
-      console.log("[v0] Frontend - qrCodeUrl recebido:", paymentResult.qrCodeUrl?.substring(0, 50) + "...")
-
       if (!paymentResult.success) {
-        console.error("[v0] Frontend - Erro da API:", paymentResult.error)
-        throw new Error(paymentResult.error || "Erro ao criar pagamento")
+        throw new Error(typeof paymentResult.error === "string" ? paymentResult.error : "Erro ao criar pagamento")
       }
 
       if (!paymentResult.pixCode) {
-        console.error("[v0] Frontend - pixCode não retornado na resposta")
         throw new Error("Código PIX não foi gerado")
       }
 
@@ -244,12 +234,16 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       setTransactionId(paymentResult.transactionId)
       setStatus("pix")
 
-      console.log("[v0] Frontend - Estado atualizado para PIX")
-
       trackInitiateCheckout(plan.price * 100, currentUtmParams)
     } catch (err) {
-      console.error("[v0] Frontend - Erro ao processar pagamento:", err)
-      setError(err instanceof Error ? err.message : "Erro ao processar pagamento")
+      let errorMessage = "Erro ao processar pagamento"
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === "string") {
+        errorMessage = err
+      }
+      console.error("Erro ao processar pagamento:", errorMessage)
+      setError(errorMessage)
       setStatus("error")
     }
   }, [plan, email, name])
@@ -441,17 +435,11 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
 
               <div className="bg-white p-3 rounded-xl border-2 border-gray-100 mb-3">
                 {pixCode ? (
-                  <>
-                    {console.log("[v0] Frontend - Renderizando QR code com pixCode:", pixCode.substring(0, 30) + "...")}
-                    <QRCodeSVG value={pixCode} size={160} level="M" className="mx-auto" />
-                  </>
+                  <QRCodeSVG value={pixCode} size={160} level="M" className="mx-auto" />
                 ) : (
-                  <>
-                    {console.log("[v0] Frontend - pixCode vazio, exibindo loader")}
-                    <div className="w-40 h-40 flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
-                    </div>
-                  </>
+                  <div className="w-40 h-40 flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                  </div>
                 )}
               </div>
 

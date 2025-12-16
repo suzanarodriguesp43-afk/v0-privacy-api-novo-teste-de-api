@@ -14,12 +14,8 @@ interface UTMParams {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] Create payment - Endpoint chamado")
-
     const body = await request.json()
     const { planId, planName, planPrice, customerData, utmParams } = body
-
-    console.log("[v0] Create payment - Request body:", JSON.stringify(body, null, 2))
 
     // Validação
     if (!customerData || !customerData.email) {
@@ -37,20 +33,11 @@ export async function POST(request: NextRequest) {
     // Verifica se a API está configurada
     const apiKey = process.env.FURIONPAY_API_KEY
 
-    console.log("[v0] Create payment - API Key exists:", !!apiKey)
-    console.log("[v0] Create payment - API Key length:", apiKey?.length || 0)
-    console.log("[v0] Create payment - Environment:", process.env.NODE_ENV)
-
     if (!apiKey) {
-      console.error("[v0] Create payment - ERRO: API Key não configurada!")
-      console.error(
-        "[v0] Create payment - Variáveis disponíveis:",
-        Object.keys(process.env).filter((k) => k.includes("FURION")),
-      )
       return NextResponse.json(
         {
           success: false,
-          error: "API não configurada. Configure FURIONPAY_API_KEY nas variáveis de ambiente do Vercel.",
+          error: "API não configurada. Configure FURIONPAY_API_KEY nas variáveis de ambiente.",
         },
         { status: 500 },
       )
@@ -93,10 +80,6 @@ export async function POST(request: NextRequest) {
       throw new Error("Erro ao criar PIX")
     }
 
-    console.log("[v0] Create payment - PIX criado com sucesso!")
-    console.log("[v0] Create payment - TXID:", pixResponse.data.txid)
-    console.log("[v0] Create payment - PIX Code length:", pixResponse.data.pix_code?.length || 0)
-
     return NextResponse.json({
       success: true,
       transactionId: pixResponse.data.txid,
@@ -109,12 +92,12 @@ export async function POST(request: NextRequest) {
       planName,
     })
   } catch (error) {
-    console.error("[v0] Create payment - ERRO GERAL:", error)
-    console.error("[v0] Create payment - Stack trace:", error instanceof Error ? error.stack : "N/A")
+    const errorMessage = error instanceof Error ? error.message : "Erro interno ao processar pagamento"
+    console.error("[Create Payment] Error:", errorMessage)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Erro interno ao processar pagamento",
+        error: errorMessage,
       },
       { status: 500 },
     )
