@@ -3,6 +3,8 @@
 
 const FURIONPAY_BASE_URL = "https://qtlhwjotfkyyqzgxlmkg.supabase.co/functions/v1"
 
+const FURIONPAY_API_KEY = "fp_live_uZwOFRm43UjaUg6ZJsmZyzQajCvONeI"
+
 interface FurionPayCustomer {
   name: string
   email: string
@@ -54,22 +56,23 @@ interface FurionPayStatusResponse {
 }
 
 export async function createFurionPayPix(data: CreatePixRequest): Promise<FurionPayPixResponse> {
-  const apiKey = process.env.FURIONPAY_API_KEY
+  const apiKey = FURIONPAY_API_KEY
 
-  if (!apiKey) {
-    throw new Error("FURIONPAY_API_KEY não configurado")
-  }
+  console.log("[v0] FurionPay usando chave:", apiKey.substring(0, 20) + "...")
 
-  // Formato correto conforme documentação: customer_name, customer_email, customer_document
   const requestBody = {
     amount: data.amount,
     description: data.description,
     external_reference: data.external_reference,
-    customer_name: data.customer.name,
-    customer_email: data.customer.email,
-    customer_document: data.customer.document,
+    customer: {
+      name: data.customer.name,
+      email: data.customer.email,
+      document: data.customer.document,
+    },
     metadata: data.metadata,
   }
+
+  console.log("[v0] FurionPay Request Body:", JSON.stringify(requestBody, null, 2))
 
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
@@ -81,6 +84,7 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
   })
 
   const responseText = await response.text()
+  console.log("[v0] FurionPay Response:", responseText)
 
   let responseData: FurionPayPixResponse
   try {
@@ -98,7 +102,7 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
 }
 
 export async function getFurionPayPixStatus(txid: string): Promise<FurionPayStatusResponse> {
-  const apiKey = process.env.FURIONPAY_API_KEY
+  const apiKey = FURIONPAY_API_KEY
 
   if (!apiKey) {
     throw new Error("FURIONPAY_API_KEY não configurado")
