@@ -70,6 +70,8 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
     metadata: data.metadata,
   }
 
+  console.log("[v0] Enviando para FurionPay - metadata:", JSON.stringify(data.metadata))
+
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
     headers: {

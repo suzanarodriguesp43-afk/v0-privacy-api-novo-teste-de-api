@@ -153,6 +153,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
   useEffect(() => {
     if (!isOpen) return
     const utms = getUTMsForAPI()
+    console.log("[v0] UTMs capturados no modal:", JSON.stringify(utms))
     setUtmParams(utms)
   }, [isOpen])
 
@@ -197,26 +198,31 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
 
     try {
       const currentUtmParams = getUTMsForAPI()
+      console.log("[v0] UTMs sendo enviados para API:", JSON.stringify(currentUtmParams))
 
       const generatedCPF = generateValidCPF()
       const customerName = name.trim()
+
+      const requestBody = {
+        planId: plan.id,
+        planName: plan.name,
+        planPrice: plan.price,
+        customerData: {
+          email,
+          name: customerName,
+          document: generatedCPF,
+        },
+        utmParams: currentUtmParams,
+      }
+
+      console.log("[v0] Body da requisição:", JSON.stringify(requestBody))
 
       const paymentResponse = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          planId: plan.id,
-          planName: plan.name,
-          planPrice: plan.price,
-          customerData: {
-            email,
-            name: customerName,
-            document: generatedCPF,
-          },
-          utmParams: currentUtmParams,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const paymentResult = await paymentResponse.json()

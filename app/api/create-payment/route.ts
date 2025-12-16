@@ -10,6 +10,8 @@ interface UTMParams {
   utm_id?: string
   utm_term?: string
   utm_content?: string
+  src?: string
+  sck?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -46,13 +48,16 @@ export async function POST(request: NextRequest) {
     // Gera ID externo único
     const externalId = `privacy-${planId}-${Date.now()}-${Math.random().toString(36).substring(7)}`
 
+    console.log("[v0] UTM params recebidos na API:", JSON.stringify(utmParams))
+
     // Prepara metadata com UTMs e informações adicionais
     const metadata: Record<string, string> = {
       plan_id: planId,
       plan_name: planName,
     }
 
-    if (utmParams) {
+    if (utmParams && typeof utmParams === "object") {
+      console.log("[v0] Processando UTMs:", Object.keys(utmParams))
       if (utmParams.utm_source) metadata.utm_source = utmParams.utm_source
       if (utmParams.utm_medium) metadata.utm_medium = utmParams.utm_medium
       if (utmParams.utm_campaign) metadata.utm_campaign = utmParams.utm_campaign
@@ -61,7 +66,13 @@ export async function POST(request: NextRequest) {
       if (utmParams.utm_id) metadata.utm_id = utmParams.utm_id
       if (utmParams.utm_term) metadata.utm_term = utmParams.utm_term
       if (utmParams.utm_content) metadata.utm_content = utmParams.utm_content
+      if (utmParams.src) metadata.src = utmParams.src
+      if (utmParams.sck) metadata.sck = utmParams.sck
+    } else {
+      console.log("[v0] UTM params não encontrados ou inválidos")
     }
+
+    console.log("[v0] Metadata final para FurionPay:", JSON.stringify(metadata))
 
     // Cria a transação PIX na FurionPay
     const pixResponse = await createFurionPayPix({
