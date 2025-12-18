@@ -39,6 +39,47 @@ const plans: Plan[] = [
   },
 ]
 
+function captureAndSaveUTMs() {
+  if (typeof window === "undefined") return
+
+  const urlParams = new URLSearchParams(window.location.search)
+  const utmKeys = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_adset",
+    "utm_ad",
+    "utm_id",
+    "utm_term",
+    "utm_content",
+    "src",
+    "sck",
+  ]
+
+  const utmParams: Record<string, string> = {}
+  let hasUtms = false
+
+  utmKeys.forEach((key) => {
+    const value = urlParams.get(key)
+    if (value) {
+      utmParams[key] = value
+      hasUtms = true
+    }
+  })
+
+  if (hasUtms) {
+    // Salva imediatamente no localStorage
+    localStorage.setItem("utm_params", JSON.stringify(utmParams))
+    console.log("[v0] UTMs capturados da URL e salvos:", JSON.stringify(utmParams))
+  } else {
+    // Verifica se já tem UTMs salvos
+    const saved = localStorage.getItem("utm_params")
+    if (saved) {
+      console.log("[v0] UTMs recuperados do localStorage:", saved)
+    }
+  }
+}
+
 export default function ProfilePage() {
   const [bioExpanded, setBioExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState<"posts" | "media">("posts")
@@ -46,43 +87,7 @@ export default function ProfilePage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
 
   useEffect(() => {
-    const loadUTMTracking = async () => {
-      const { initUTMTracking } = await import("@/lib/utm-tracker")
-      initUTMTracking()
-
-      if (typeof window === "undefined") return
-
-      const urlParams = new URLSearchParams(window.location.search)
-      const utmKeys = [
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_adset",
-        "utm_ad",
-        "utm_id",
-        "utm_term",
-        "utm_content",
-        "src",
-        "sck",
-      ]
-
-      const utmParams: Record<string, string> = {}
-      let hasUtms = false
-
-      utmKeys.forEach((key) => {
-        const value = urlParams.get(key)
-        if (value) {
-          utmParams[key] = value
-          hasUtms = true
-        }
-      })
-
-      if (hasUtms) {
-        localStorage.setItem("utm_params", JSON.stringify(utmParams))
-      }
-    }
-
-    loadUTMTracking()
+    captureAndSaveUTMs()
   }, [])
 
   const handleSubscribe = (plan: Plan) => {
@@ -145,7 +150,10 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-500">@mirella</p>
 
             <p className={`text-gray-500 mt-2 ${bioExpanded ? "" : "line-clamp-2"}`}>
-              Veio conferir se é tudo rosinha né? Sim é tudo rosinha🙈! Você vai me ver toda peladinha, me masturbando com dedinhos e brinquedos… 💭 fazendo streaptease pra você e também vídeos de Sexo e Garganta Profunda. Uma tonelada de conteúdos solo e acompanhada bem quente pra você aproveitar. Aqui é onde você vai me ver o mais natural possível, então prepare-se para relaxar e aproveitar o show! 😜
+              Veio conferir se é tudo rosinha né? Sim é tudo rosinha🙈! Você vai me ver toda peladinha, me masturbando
+              com dedinhos e brinquedos… 💭 fazendo streaptease pra você e também vídeos de Sexo e Garganta Profunda.
+              Uma tonelada de conteúdos solo e acompanhada bem quente pra você aproveitar. Aqui é onde você vai me ver o
+              mais natural possível, então prepare-se para relaxar e aproveitar o show! 😜
             </p>
             <button
               onClick={() => setBioExpanded(!bioExpanded)}

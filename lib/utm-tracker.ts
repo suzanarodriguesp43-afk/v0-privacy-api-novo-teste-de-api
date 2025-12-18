@@ -78,16 +78,24 @@ export function initUTMTracking(): UTMParams {
   return getStoredUTMs()
 }
 
-// Retorna UTMs para enviar na API
 export function getUTMsForAPI(): UTMParams {
-  // Primeiro tenta pegar da URL atual
+  if (typeof window === "undefined") return {}
+
+  // Primeiro tenta pegar da URL atual (caso ainda esteja na mesma sessão)
   const urlUtms = captureUTMsFromURL()
 
-  // Se não tiver na URL, pega do storage
+  // Depois pega do storage
   const storedUtms = getStoredUTMs()
 
-  // Mescla dando prioridade para URL atual
-  return { ...storedUtms, ...urlUtms }
+  // Mescla dando prioridade para URL atual, depois storage
+  const merged = { ...storedUtms, ...urlUtms }
+
+  // Log para debug
+  console.log("[v0] getUTMsForAPI - URL:", JSON.stringify(urlUtms))
+  console.log("[v0] getUTMsForAPI - Storage:", JSON.stringify(storedUtms))
+  console.log("[v0] getUTMsForAPI - Merged:", JSON.stringify(merged))
+
+  return merged
 }
 
 // Formata UTMs para exibição

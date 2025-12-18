@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { X, Loader2, Copy, Check, RefreshCw, QrCode, Mail, User } from "lucide-react"
 import { trackInitiateCheckout } from "@/lib/tracking"
-import { getUTMsForAPI, type UTMParams } from "@/lib/utm-tracker"
+import type { UTMParams } from "@/lib/utm-tracker"
 import { QRCodeSVG } from "qrcode.react"
 
 interface Plan {
@@ -152,8 +152,54 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
 
   useEffect(() => {
     if (!isOpen) return
-    const utms = getUTMsForAPI()
-    console.log("[v0] UTMs capturados no modal:", JSON.stringify(utms))
+
+    // Tenta capturar UTMs de múltiplas fontes
+    const captureUTMs = () => {
+      // 1. Tenta da URL atual
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlUtms: UTMParams = {}
+      const utmKeys = [
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_adset",
+        "utm_ad",
+        "utm_id",
+        "utm_term",
+        "utm_content",
+        "src",
+        "sck",
+      ]
+
+      utmKeys.forEach((key) => {
+        const value = urlParams.get(key)
+        if (value) {
+          urlUtms[key as keyof UTMParams] = value
+        }
+      })
+
+      // 2. Tenta do localStorage
+      let storedUtms: UTMParams = {}
+      try {
+        const stored = localStorage.getItem("utm_params")
+        if (stored) {
+          storedUtms = JSON.parse(stored)
+        }
+      } catch (e) {
+        console.error("[v0] Erro ao ler UTMs do localStorage:", e)
+      }
+
+      // 3. Mescla (URL tem prioridade)
+      const merged = { ...storedUtms, ...urlUtms }
+
+      console.log("[v0] Modal - UTMs da URL:", JSON.stringify(urlUtms))
+      console.log("[v0] Modal - UTMs do Storage:", JSON.stringify(storedUtms))
+      console.log("[v0] Modal - UTMs mesclados:", JSON.stringify(merged))
+
+      return merged
+    }
+
+    const utms = captureUTMs()
     setUtmParams(utms)
   }, [isOpen])
 
@@ -197,8 +243,42 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
     setError("")
 
     try {
-      const currentUtmParams = getUTMsForAPI()
-      console.log("[v0] UTMs sendo enviados para API:", JSON.stringify(currentUtmParams))
+      const urlParams = new URLSearchParams(window.location.search)
+      const freshUrlUtms: UTMParams = {}
+      const utmKeys = [
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_adset",
+        "utm_ad",
+        "utm_id",
+        "utm_term",
+        "utm_content",
+        "src",
+        "sck",
+      ]
+
+      utmKeys.forEach((key) => {
+        const value = urlParams.get(key)
+        if (value) {
+          freshUrlUtms[key as keyof UTMParams] = value
+        }
+      })
+
+      let storedUtms: UTMParams = {}
+      try {
+        const stored = localStorage.getItem("utm_params")
+        if (stored) {
+          storedUtms = JSON.parse(stored)
+        }
+      } catch (e) {
+        console.error("[v0] Erro ao ler UTMs:", e)
+      }
+
+      // Mescla todas as fontes de UTMs
+      const currentUtmParams = { ...storedUtms, ...freshUrlUtms, ...utmParams }
+
+      console.log("[v0] Pagamento - UTMs finais sendo enviados:", JSON.stringify(currentUtmParams))
 
       const generatedCPF = generateValidCPF()
       const customerName = name.trim()
@@ -215,7 +295,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
         utmParams: currentUtmParams,
       }
 
-      console.log("[v0] Body da requisição:", JSON.stringify(requestBody))
+      console.log("[v0] Body completo da requisição:", JSON.stringify(requestBody))
 
       const paymentResponse = await fetch("/api/create-payment", {
         method: "POST",
@@ -252,7 +332,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       setError(errorMessage)
       setStatus("error")
     }
-  }, [plan, email, name])
+  }, [plan, email, name, utmParams])
 
   useEffect(() => {
     if (status !== "pix" || !transactionId) return
