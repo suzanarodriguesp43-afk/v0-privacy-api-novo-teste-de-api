@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { X, Loader2, Copy, Check, RefreshCw, QrCode, Mail, User } from "lucide-react"
 import { trackInitiateCheckout } from "@/lib/tracking"
-import type { UTMParams } from "@/lib/utm-tracker"
 import { QRCodeSVG } from "qrcode.react"
 
 interface Plan {
@@ -21,120 +20,69 @@ interface PaymentModalProps {
   plan: Plan | null
 }
 
-type PaymentStatus = "idle" | "form" | "loading" | "pix" | "checking" | "success" | "error"
-
-function generateValidCPF(): string {
-  const randomDigit = () => Math.floor(Math.random() * 10)
-
-  // Gera os 9 primeiros dígitos
-  const digits: number[] = []
-  for (let i = 0; i < 9; i++) {
-    digits.push(randomDigit())
-  }
-
-  // Calcula primeiro dígito verificador
-  let sum = 0
-  for (let i = 0; i < 9; i++) {
-    sum += digits[i] * (10 - i)
-  }
-  let remainder = (sum * 10) % 11
-  if (remainder === 10 || remainder === 11) remainder = 0
-  digits.push(remainder)
-
-  // Calcula segundo dígito verificador
-  sum = 0
-  for (let i = 0; i < 10; i++) {
-    sum += digits[i] * (11 - i)
-  }
-  remainder = (sum * 10) % 11
-  if (remainder === 10 || remainder === 11) remainder = 0
-  digits.push(remainder)
-
-  return digits.join("")
+interface UTMParams {
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_adset?: string
+  utm_ad?: string
+  utm_id?: string
+  utm_term?: string
+  utm_content?: string
+  src?: string
+  sck?: string
 }
 
-function generateRandomName(): string {
-  const firstNames = [
-    "João",
-    "Maria",
-    "Pedro",
-    "Ana",
-    "Lucas",
-    "Julia",
-    "Gabriel",
-    "Mariana",
-    "Rafael",
-    "Beatriz",
-    "Mateus",
-    "Larissa",
-    "Bruno",
-    "Fernanda",
-    "Carlos",
-    "Amanda",
-    "Diego",
-    "Camila",
-    "Felipe",
-    "Letícia",
-    "Gustavo",
-    "Patricia",
-    "Ricardo",
-    "Vanessa",
-    "Thiago",
-    "Isabela",
-    "Leonardo",
-    "Carolina",
-    "André",
-    "Juliana",
-    "Eduardo",
-    "Bruna",
-    "Rodrigo",
-    "Aline",
-    "Marcelo",
-    "Natalia",
-  ]
+type PaymentStatus = "idle" | "form" | "loading" | "pix" | "checking" | "success" | "error"
 
-  const lastNames = [
-    "Silva",
-    "Santos",
-    "Oliveira",
-    "Souza",
-    "Rodrigues",
-    "Ferreira",
-    "Alves",
-    "Pereira",
-    "Lima",
-    "Gomes",
-    "Costa",
-    "Ribeiro",
-    "Martins",
-    "Carvalho",
-    "Almeida",
-    "Lopes",
-    "Soares",
-    "Fernandes",
-    "Vieira",
-    "Barbosa",
-    "Rocha",
-    "Dias",
-    "Nascimento",
-    "Andrade",
-    "Moreira",
-    "Nunes",
-    "Marques",
-    "Machado",
-    "Mendes",
-    "Freitas",
-    "Cardoso",
-    "Ramos",
-    "Gonçalves",
-    "Santana",
-    "Teixeira",
-  ]
+// ... existing code for generateValidCPF and generateRandomName ...
 
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+function getAllUTMs(): UTMParams {
+  const utmParams: UTMParams = {}
 
-  return `${firstName} ${lastName}`
+  try {
+    // 1. Primeiro tenta do localStorage
+    const storedLocal = localStorage.getItem("utm_params")
+    if (storedLocal) {
+      const parsed = JSON.parse(storedLocal)
+      Object.assign(utmParams, parsed)
+    }
+  } catch (e) {}
+
+  try {
+    // 2. Depois tenta do sessionStorage
+    const storedSession = sessionStorage.getItem("utm_params")
+    if (storedSession) {
+      const parsed = JSON.parse(storedSession)
+      Object.assign(utmParams, parsed)
+    }
+  } catch (e) {}
+
+  try {
+    // 3. Por último, pega da URL atual (tem prioridade máxima)
+    const urlParams = new URLSearchParams(window.location.search)
+    const utmKeys = [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_adset",
+      "utm_ad",
+      "utm_id",
+      "utm_term",
+      "utm_content",
+      "src",
+      "sck",
+    ]
+
+    utmKeys.forEach((key) => {
+      const value = urlParams.get(key)
+      if (value) {
+        utmParams[key as keyof UTMParams] = decodeURIComponent(value)
+      }
+    })
+  } catch (e) {}
+
+  return utmParams
 }
 
 export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
@@ -148,60 +96,6 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
   const [transactionId, setTransactionId] = useState<string>("")
   const [error, setError] = useState<string>("")
   const [copied, setCopied] = useState(false)
-  const [utmParams, setUtmParams] = useState<UTMParams>({})
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    // Tenta capturar UTMs de múltiplas fontes
-    const captureUTMs = () => {
-      // 1. Tenta da URL atual
-      const urlParams = new URLSearchParams(window.location.search)
-      const urlUtms: UTMParams = {}
-      const utmKeys = [
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_adset",
-        "utm_ad",
-        "utm_id",
-        "utm_term",
-        "utm_content",
-        "src",
-        "sck",
-      ]
-
-      utmKeys.forEach((key) => {
-        const value = urlParams.get(key)
-        if (value) {
-          urlUtms[key as keyof UTMParams] = value
-        }
-      })
-
-      // 2. Tenta do localStorage
-      let storedUtms: UTMParams = {}
-      try {
-        const stored = localStorage.getItem("utm_params")
-        if (stored) {
-          storedUtms = JSON.parse(stored)
-        }
-      } catch (e) {
-        console.error("[v0] Erro ao ler UTMs do localStorage:", e)
-      }
-
-      // 3. Mescla (URL tem prioridade)
-      const merged = { ...storedUtms, ...urlUtms }
-
-      console.log("[v0] Modal - UTMs da URL:", JSON.stringify(urlUtms))
-      console.log("[v0] Modal - UTMs do Storage:", JSON.stringify(storedUtms))
-      console.log("[v0] Modal - UTMs mesclados:", JSON.stringify(merged))
-
-      return merged
-    }
-
-    const utms = captureUTMs()
-    setUtmParams(utms)
-  }, [isOpen])
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -243,42 +137,8 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
     setError("")
 
     try {
-      const urlParams = new URLSearchParams(window.location.search)
-      const freshUrlUtms: UTMParams = {}
-      const utmKeys = [
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_adset",
-        "utm_ad",
-        "utm_id",
-        "utm_term",
-        "utm_content",
-        "src",
-        "sck",
-      ]
-
-      utmKeys.forEach((key) => {
-        const value = urlParams.get(key)
-        if (value) {
-          freshUrlUtms[key as keyof UTMParams] = value
-        }
-      })
-
-      let storedUtms: UTMParams = {}
-      try {
-        const stored = localStorage.getItem("utm_params")
-        if (stored) {
-          storedUtms = JSON.parse(stored)
-        }
-      } catch (e) {
-        console.error("[v0] Erro ao ler UTMs:", e)
-      }
-
-      // Mescla todas as fontes de UTMs
-      const currentUtmParams = { ...storedUtms, ...freshUrlUtms, ...utmParams }
-
-      console.log("[v0] Pagamento - UTMs finais sendo enviados:", JSON.stringify(currentUtmParams))
+      // Captura UTMs de todas as fontes no momento do pagamento
+      const utmParams = getAllUTMs()
 
       const generatedCPF = generateValidCPF()
       const customerName = name.trim()
@@ -292,10 +152,8 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
           name: customerName,
           document: generatedCPF,
         },
-        utmParams: currentUtmParams,
+        utmParams: utmParams,
       }
-
-      console.log("[v0] Body completo da requisição:", JSON.stringify(requestBody))
 
       const paymentResponse = await fetch("/api/create-payment", {
         method: "POST",
@@ -320,7 +178,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       setTransactionId(paymentResult.transactionId)
       setStatus("pix")
 
-      trackInitiateCheckout(plan.price * 100, currentUtmParams)
+      trackInitiateCheckout(plan.price * 100, utmParams)
     } catch (err) {
       let errorMessage = "Erro ao processar pagamento"
       if (err instanceof Error) {
@@ -328,11 +186,12 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       } else if (typeof err === "string") {
         errorMessage = err
       }
-      console.error("Erro ao processar pagamento:", errorMessage)
       setError(errorMessage)
       setStatus("error")
     }
-  }, [plan, email, name, utmParams])
+  }, [plan, email, name])
+
+  // ... existing code for useEffect check payment ...
 
   useEffect(() => {
     if (status !== "pix" || !transactionId) return
@@ -354,7 +213,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
           }, 2000)
         }
       } catch (err) {
-        console.error("Check payment error:", err)
+        // Silent fail
       }
     }
 
@@ -383,7 +242,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error("Copy error:", err)
+      // Silent fail
     }
   }
 
@@ -582,4 +441,31 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       </div>
     </div>
   )
+}
+
+function generateValidCPF(): string {
+  const randomDigit = () => Math.floor(Math.random() * 10)
+
+  const digits: number[] = []
+  for (let i = 0; i < 9; i++) {
+    digits.push(randomDigit())
+  }
+
+  let sum = 0
+  for (let i = 0; i < 9; i++) {
+    sum += digits[i] * (10 - i)
+  }
+  let remainder = (sum * 10) % 11
+  if (remainder === 10 || remainder === 11) remainder = 0
+  digits.push(remainder)
+
+  sum = 0
+  for (let i = 0; i < 10; i++) {
+    sum += digits[i] * (11 - i)
+  }
+  remainder = (sum * 10) % 11
+  if (remainder === 10 || remainder === 11) remainder = 0
+  digits.push(remainder)
+
+  return digits.join("")
 }

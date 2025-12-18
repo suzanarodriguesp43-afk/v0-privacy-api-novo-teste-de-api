@@ -2,7 +2,6 @@
 // Documentação: https://api.furionpay.com/integration
 
 const FURIONPAY_BASE_URL = "https://qtlhwjotfkyyqzgxlmkg.supabase.co/functions/v1"
-
 const FURIONPAY_API_KEY = "fp_live_uZwOFRm43UjaUg6ZJsmZyzQajCvONeI"
 
 interface FurionPayCustomer {
@@ -67,10 +66,8 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
       email: data.customer.email,
       document: data.customer.document,
     },
-    metadata: data.metadata,
+    metadata: data.metadata || {},
   }
-
-  console.log("[v0] Enviando para FurionPay - metadata:", JSON.stringify(data.metadata))
 
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
@@ -129,7 +126,6 @@ export async function getFurionPayPixStatus(txid: string): Promise<FurionPayStat
   return responseData
 }
 
-// Helpers para verificar status
 export function isPaymentApproved(status: string): boolean {
   return status === "paid"
 }

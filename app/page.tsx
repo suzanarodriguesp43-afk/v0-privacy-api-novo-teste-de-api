@@ -42,41 +42,40 @@ const plans: Plan[] = [
 function captureAndSaveUTMs() {
   if (typeof window === "undefined") return
 
-  const urlParams = new URLSearchParams(window.location.search)
-  const utmKeys = [
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_adset",
-    "utm_ad",
-    "utm_id",
-    "utm_term",
-    "utm_content",
-    "src",
-    "sck",
-  ]
+  try {
+    const urlParams = new URLSearchParams(window.location.search)
+    const utmKeys = [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_adset",
+      "utm_ad",
+      "utm_id",
+      "utm_term",
+      "utm_content",
+      "src",
+      "sck",
+    ]
 
-  const utmParams: Record<string, string> = {}
-  let hasUtms = false
+    const utmParams: Record<string, string> = {}
+    let hasUtms = false
 
-  utmKeys.forEach((key) => {
-    const value = urlParams.get(key)
-    if (value) {
-      utmParams[key] = value
-      hasUtms = true
+    utmKeys.forEach((key) => {
+      const value = urlParams.get(key)
+      if (value) {
+        utmParams[key] = decodeURIComponent(value)
+        hasUtms = true
+      }
+    })
+
+    if (hasUtms) {
+      // Salva imediatamente no localStorage
+      localStorage.setItem("utm_params", JSON.stringify(utmParams))
+      // Também salva no sessionStorage como backup
+      sessionStorage.setItem("utm_params", JSON.stringify(utmParams))
     }
-  })
-
-  if (hasUtms) {
-    // Salva imediatamente no localStorage
-    localStorage.setItem("utm_params", JSON.stringify(utmParams))
-    console.log("[v0] UTMs capturados da URL e salvos:", JSON.stringify(utmParams))
-  } else {
-    // Verifica se já tem UTMs salvos
-    const saved = localStorage.getItem("utm_params")
-    if (saved) {
-      console.log("[v0] UTMs recuperados do localStorage:", saved)
-    }
+  } catch (e) {
+    // Silently fail
   }
 }
 
