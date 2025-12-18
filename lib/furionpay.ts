@@ -66,8 +66,10 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
       email: data.customer.email,
       document: data.customer.document,
     },
-    metadata: data.metadata || {},
+    metadata: data.metadata && Object.keys(data.metadata).length > 0 ? data.metadata : {},
   }
+
+  console.log("[v0] Request body para FurionPay:", JSON.stringify(requestBody, null, 2))
 
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
@@ -79,6 +81,7 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
   })
 
   const responseText = await response.text()
+  console.log("[v0] Resposta raw da FurionPay:", responseText)
 
   let responseData: FurionPayPixResponse
   try {

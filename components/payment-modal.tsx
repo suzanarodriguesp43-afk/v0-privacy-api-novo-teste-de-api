@@ -35,53 +35,61 @@ interface UTMParams {
 
 type PaymentStatus = "idle" | "form" | "loading" | "pix" | "checking" | "success" | "error"
 
-// ... existing code for generateValidCPF and generateRandomName ...
-
 function getAllUTMs(): UTMParams {
   const utmParams: UTMParams = {}
+  const utmKeys = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_adset",
+    "utm_ad",
+    "utm_id",
+    "utm_term",
+    "utm_content",
+    "src",
+    "sck",
+  ]
 
   try {
-    // 1. Primeiro tenta do localStorage
-    const storedLocal = localStorage.getItem("utm_params")
-    if (storedLocal) {
-      const parsed = JSON.parse(storedLocal)
-      Object.assign(utmParams, parsed)
-    }
-  } catch (e) {}
-
-  try {
-    // 2. Depois tenta do sessionStorage
-    const storedSession = sessionStorage.getItem("utm_params")
-    if (storedSession) {
-      const parsed = JSON.parse(storedSession)
-      Object.assign(utmParams, parsed)
-    }
-  } catch (e) {}
-
-  try {
-    // 3. Por último, pega da URL atual (tem prioridade máxima)
+    // 1. Primeiro tenta da URL atual (prioridade máxima)
     const urlParams = new URLSearchParams(window.location.search)
-    const utmKeys = [
-      "utm_source",
-      "utm_medium",
-      "utm_campaign",
-      "utm_adset",
-      "utm_ad",
-      "utm_id",
-      "utm_term",
-      "utm_content",
-      "src",
-      "sck",
-    ]
-
     utmKeys.forEach((key) => {
       const value = urlParams.get(key)
-      if (value) {
+      if (value && value.trim() !== "") {
         utmParams[key as keyof UTMParams] = decodeURIComponent(value)
       }
     })
-  } catch (e) {}
+  } catch (e) {
+    console.log("[v0] Erro ao capturar UTMs da URL:", e)
+  }
 
+  try {
+    // 2. Se não encontrou na URL, tenta do localStorage
+    if (Object.keys(utmParams).length === 0) {
+      const storedLocal = localStorage.getItem("utm_params")
+      if (storedLocal) {
+        const parsed = JSON.parse(storedLocal)
+        Object.assign(utmParams, parsed)
+      }
+    }
+  } catch (e) {
+    console.log("[v0] Erro ao capturar UTMs do localStorage:", e)
+  }
+
+  try {
+    // 3. Se ainda não encontrou, tenta do sessionStorage
+    if (Object.keys(utmParams).length === 0) {
+      const storedSession = sessionStorage.getItem("utm_params")
+      if (storedSession) {
+        const parsed = JSON.parse(storedSession)
+        Object.assign(utmParams, parsed)
+      }
+    }
+  } catch (e) {
+    console.log("[v0] Erro ao capturar UTMs do sessionStorage:", e)
+  }
+
+  console.log("[v0] UTMs capturados no modal:", JSON.stringify(utmParams))
   return utmParams
 }
 
@@ -96,6 +104,15 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
   const [transactionId, setTransactionId] = useState<string>("")
   const [error, setError] = useState<string>("")
   const [copied, setCopied] = useState(false)
+  const [capturedUtms, setCapturedUtms] = useState<UTMParams>({})
+
+  useEffect(() => {
+    if (isOpen) {
+      const utms = getAllUTMs()
+      setCapturedUtms(utms)
+      console.log("[v0] UTMs armazenados no estado do modal:", JSON.stringify(utms))
+    }
+  }, [isOpen])
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -137,8 +154,9 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
     setError("")
 
     try {
-      // Captura UTMs de todas as fontes no momento do pagamento
-      const utmParams = getAllUTMs()
+      const utmParams = Object.keys(capturedUtms).length > 0 ? capturedUtms : getAllUTMs()
+
+      console.log("[v0] UTMs sendo enviados para API:", JSON.stringify(utmParams))
 
       const generatedCPF = generateValidCPF()
       const customerName = name.trim()
@@ -155,6 +173,8 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
         utmParams: utmParams,
       }
 
+      console.log("[v0] Request body completo:", JSON.stringify(requestBody))
+
       const paymentResponse = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
@@ -164,6 +184,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       })
 
       const paymentResult = await paymentResponse.json()
+      console.log("[v0] Resposta da API:", JSON.stringify(paymentResult))
 
       if (!paymentResult.success) {
         throw new Error(typeof paymentResult.error === "string" ? paymentResult.error : "Erro ao criar pagamento")
@@ -189,9 +210,7 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       setError(errorMessage)
       setStatus("error")
     }
-  }, [plan, email, name])
-
-  // ... existing code for useEffect check payment ...
+  }, [plan, email, name, capturedUtms])
 
   useEffect(() => {
     if (status !== "pix" || !transactionId) return

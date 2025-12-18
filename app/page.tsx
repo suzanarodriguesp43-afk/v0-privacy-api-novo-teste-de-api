@@ -4,6 +4,8 @@ import { useState, useEffect, lazy, Suspense } from "react"
 import Image from "next/image"
 const PaymentModal = lazy(() => import("@/components/payment-modal").then((mod) => ({ default: mod.PaymentModal })))
 
+// ... existing code for interfaces and plans ...
+
 interface Plan {
   id: string
   name: string
@@ -62,20 +64,24 @@ function captureAndSaveUTMs() {
 
     utmKeys.forEach((key) => {
       const value = urlParams.get(key)
-      if (value) {
+      if (value && value.trim() !== "") {
+        // Decodifica caracteres especiais como | usados no Facebook
         utmParams[key] = decodeURIComponent(value)
         hasUtms = true
       }
     })
 
     if (hasUtms) {
-      // Salva imediatamente no localStorage
-      localStorage.setItem("utm_params", JSON.stringify(utmParams))
-      // Também salva no sessionStorage como backup
-      sessionStorage.setItem("utm_params", JSON.stringify(utmParams))
+      const utmJson = JSON.stringify(utmParams)
+      // Salva em ambos os storages para redundância
+      localStorage.setItem("utm_params", utmJson)
+      sessionStorage.setItem("utm_params", utmJson)
+      console.log("[v0] UTMs salvos na página:", utmJson)
+    } else {
+      console.log("[v0] Nenhum UTM encontrado na URL")
     }
   } catch (e) {
-    // Silently fail
+    console.log("[v0] Erro ao capturar UTMs:", e)
   }
 }
 
@@ -94,6 +100,7 @@ export default function ProfilePage() {
     setIsPaymentModalOpen(true)
   }
 
+  // ... existing code for return JSX ...
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -306,7 +313,6 @@ function PostCard({
   const [videoLoaded, setVideoLoaded] = useState(false)
 
   useEffect(() => {
-    // Lazy load video when it's near viewport
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {

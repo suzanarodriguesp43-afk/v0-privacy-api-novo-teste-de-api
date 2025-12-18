@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { planId, planName, planPrice, customerData, utmParams } = body
 
+    console.log("[v0] UTMs recebidos na API:", JSON.stringify(utmParams))
+
     // Validação
     if (!customerData || !customerData.email) {
       return NextResponse.json({ success: false, error: "Email é obrigatório" }, { status: 400 })
@@ -40,7 +42,6 @@ export async function POST(request: NextRequest) {
       plan_name: planName,
     }
 
-    // Adiciona todos os UTMs ao metadata
     if (utmParams && typeof utmParams === "object") {
       const utmKeys = [
         "utm_source",
@@ -57,11 +58,13 @@ export async function POST(request: NextRequest) {
 
       utmKeys.forEach((key) => {
         const value = utmParams[key]
-        if (value && typeof value === "string" && value.trim() !== "") {
-          metadata[key] = value.trim()
+        if (value !== undefined && value !== null && value !== "") {
+          metadata[key] = String(value).trim()
         }
       })
     }
+
+    console.log("[v0] Metadata final sendo enviado para FurionPay:", JSON.stringify(metadata))
 
     // Cria a transação PIX na FurionPay
     const pixResponse = await createFurionPayPix({
@@ -92,6 +95,7 @@ export async function POST(request: NextRequest) {
       planName,
     })
   } catch (error) {
+    console.log("[v0] Erro na API create-payment:", error)
     const errorMessage = error instanceof Error ? error.message : "Erro interno ao processar pagamento"
     return NextResponse.json(
       {
