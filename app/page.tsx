@@ -76,12 +76,9 @@ function captureAndSaveUTMs() {
       // Salva em ambos os storages para redundância
       localStorage.setItem("utm_params", utmJson)
       sessionStorage.setItem("utm_params", utmJson)
-      console.log("[v0] UTMs salvos na página:", utmJson)
-    } else {
-      console.log("[v0] Nenhum UTM encontrado na URL")
     }
   } catch (e) {
-    console.log("[v0] Erro ao capturar UTMs:", e)
+    // Silently fail
   }
 }
 

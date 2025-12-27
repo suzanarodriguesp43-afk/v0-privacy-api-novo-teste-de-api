@@ -2,7 +2,7 @@
 // Documentação: https://api.furionpay.com/integration
 
 const FURIONPAY_BASE_URL = "https://qtlhwjotfkyyqzgxlmkg.supabase.co/functions/v1"
-const FURIONPAY_API_KEY = "fp_live_uZwOFRm43UjaUg6ZJsmZyzQajCvONeI"
+const FURIONPAY_API_KEY = "fp_live_mmUTLsgsIrzWa12IYQ3avQVIzJZcPWA"
 
 interface FurionPayCustomer {
   name: string
@@ -66,10 +66,10 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
       email: data.customer.email,
       document: data.customer.document,
     },
-    metadata: data.metadata && Object.keys(data.metadata).length > 0 ? data.metadata : {},
+    metadata: data.metadata || {},
   }
 
-  console.log("[v0] Request body para FurionPay:", JSON.stringify(requestBody, null, 2))
+  console.log("[v0] FurionPay - Enviando metadata:", requestBody.metadata)
 
   const response = await fetch(`${FURIONPAY_BASE_URL}/api-v1-pix-create`, {
     method: "POST",
@@ -81,7 +81,6 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
   })
 
   const responseText = await response.text()
-  console.log("[v0] Resposta raw da FurionPay:", responseText)
 
   let responseData: FurionPayPixResponse
   try {
@@ -94,6 +93,8 @@ export async function createFurionPayPix(data: CreatePixRequest): Promise<Furion
     const errorMessage = responseData.error?.message || `FurionPay API error: ${response.status}`
     throw new Error(errorMessage)
   }
+
+  console.log("[v0] FurionPay - Pagamento criado com sucesso:", responseData.data.txid)
 
   return responseData
 }

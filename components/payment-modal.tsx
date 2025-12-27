@@ -51,7 +51,7 @@ function getAllUTMs(): UTMParams {
   ]
 
   try {
-    // 1. Primeiro tenta da URL atual (prioridade máxima)
+    // 1. Tenta da URL atual
     const urlParams = new URLSearchParams(window.location.search)
     utmKeys.forEach((key) => {
       const value = urlParams.get(key)
@@ -59,11 +59,7 @@ function getAllUTMs(): UTMParams {
         utmParams[key as keyof UTMParams] = decodeURIComponent(value)
       }
     })
-  } catch (e) {
-    console.log("[v0] Erro ao capturar UTMs da URL:", e)
-  }
 
-  try {
     // 2. Se não encontrou na URL, tenta do localStorage
     if (Object.keys(utmParams).length === 0) {
       const storedLocal = localStorage.getItem("utm_params")
@@ -72,11 +68,7 @@ function getAllUTMs(): UTMParams {
         Object.assign(utmParams, parsed)
       }
     }
-  } catch (e) {
-    console.log("[v0] Erro ao capturar UTMs do localStorage:", e)
-  }
 
-  try {
     // 3. Se ainda não encontrou, tenta do sessionStorage
     if (Object.keys(utmParams).length === 0) {
       const storedSession = sessionStorage.getItem("utm_params")
@@ -86,10 +78,9 @@ function getAllUTMs(): UTMParams {
       }
     }
   } catch (e) {
-    console.log("[v0] Erro ao capturar UTMs do sessionStorage:", e)
+    // Silently fail
   }
 
-  console.log("[v0] UTMs capturados no modal:", JSON.stringify(utmParams))
   return utmParams
 }
 
@@ -156,8 +147,6 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
     try {
       const utmParams = Object.keys(capturedUtms).length > 0 ? capturedUtms : getAllUTMs()
 
-      console.log("[v0] UTMs sendo enviados para API:", JSON.stringify(utmParams))
-
       const generatedCPF = generateValidCPF()
       const customerName = name.trim()
 
@@ -173,8 +162,6 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
         utmParams: utmParams,
       }
 
-      console.log("[v0] Request body completo:", JSON.stringify(requestBody))
-
       const paymentResponse = await fetch("/api/create-payment", {
         method: "POST",
         headers: {
@@ -184,7 +171,6 @@ export function PaymentModal({ isOpen, onClose, plan }: PaymentModalProps) {
       })
 
       const paymentResult = await paymentResponse.json()
-      console.log("[v0] Resposta da API:", JSON.stringify(paymentResult))
 
       if (!paymentResult.success) {
         throw new Error(typeof paymentResult.error === "string" ? paymentResult.error : "Erro ao criar pagamento")
